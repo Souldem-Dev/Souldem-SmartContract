@@ -1,11 +1,8 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.19;
 
-pragma solidity >=0.7.0 <0.9.0;
-interface IGovernance{
-    
-}
 contract Governance{
-    address relayer = 0xb765B7A732e6fd80E3a6cC4b2FfD489eAc0d2501;
+    address public relayer;
     address public contractAddress;
     string public governanceName;
     uint public totalEndExamination;
@@ -48,13 +45,14 @@ mapping (uint=>address) public studentNonce;
 mapping (uint=>address) public mentorNonce;
 mapping (uint=>address) public hodNonce;
 mapping(uint=>bool) isUniqueIdUsed;
-constructor(string memory _governanceName,uint _totalEndExamination, address _owner,string memory _batch){
+constructor(string memory _governanceName,uint _totalEndExamination, address _owner,string memory _batch,address _relayer){
 contractAddress = address(this);
 governanceName = _governanceName;
 totalEndExamination =_totalEndExamination;
 owner = _owner;
 batch = _batch;
 CHAIN_ID = block.chainid;
+relayer = _relayer;
 INITIAL_DOMAIN_SEPARATOR = hashDomain(_governanceName,"1",block.chainid,address(this));
 }
 modifier Elig(address add,uint uniqueId){
@@ -264,6 +262,7 @@ require(recoveredAddress == mentor,"INVALID_MENTOR");
 
 function mintCert(address _student,address mentor,uint256 currentSemNum,string memory receiptNo,bytes memory mentorSignature, string memory _ipfsCID,bytes memory relayerSig,string memory degreeIpfs) external{
 require(student[_student] == true,"YNS");
+require(isUsedReceipt[receiptNo] == false,"YAM");
 (bytes32 r,bytes32 s,uint8 v) = split(mentorSignature);
 isMentorSign(mentor,currentSemNum,receiptNo,v,r,s);
 isVerifyByrelayer(_ipfsCID,relayerSig);
@@ -283,6 +282,15 @@ function mintDegreeCert(address _student,string memory _ipfsCID) public {
 
 }
 
+function getSemMarkSheet(address _stud,uint sem)public view returns (string memory){
+    Certificate storage _cert = semCertIssuance[_stud][sem];
+    return (_cert.ipfsCID);
+}
+
+function getDegree(address _stud)public view returns (string memory){
+    Certificate storage _cert = degreeCert[_stud];
+    return (_cert.ipfsCID);
+}
 function hashUpd(address _add,string memory _cid,uint256 uniqueId) public  pure returns(bytes32){
 return (keccak256(abi.encode(
 keccak256(bytes("update(address account,string cid,uint256 uniqueId)")),
@@ -342,6 +350,3 @@ function hashDomain(string memory name,string memory version,uint chainId,addres
     }
 
 }
-
-//bafkreiab2a6fs4ddy2my4v5ycu37mc6orsjveepcv7aw3g7bwnwy53ytke
-// 0x420B7db4DBEbEa0f02E7D6E4Fa438080C0EF54C4 --mainet stuff
